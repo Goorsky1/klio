@@ -40,6 +40,10 @@ func (l *local) ValidatePaths() error {
 
 	projectDir := path.Dir(l.projectConfigFile)
 
+	if projectDir == "" {
+		return fmt.Errorf("packages can be installed locally only under project directory, use \"--global\"")
+	}
+
 	if projectDir == currentUser.HomeDir {
 		return fmt.Errorf("home directory cannot be a project directory")
 	}
@@ -90,7 +94,11 @@ func (l *local) InstallDependencies(listOfCommands []dependency.Dependency) erro
 		return fmt.Errorf("no dependencies provided for the project")
 	}
 
-	l.installedDeps = installDependencies(l.dependencyManager, listOfCommands, l.installDir)
+	installedDeps, err := installDependencies(l.dependencyManager, listOfCommands, l.installDir)
+	if err != nil {
+		return err
+	}
+	l.installedDeps = installedDeps
 
 	if !l.noSave {
 		for _, installedDep := range l.installedDeps {

@@ -13,6 +13,8 @@ func main() {
 		Version:     Version,
 	}
 
+	log.Debugf("Running Klio version %s", Version)
+
 	if err := cmd.Execute(); err != nil {
 		log.Fatal(err)
 	}
