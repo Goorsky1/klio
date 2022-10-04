@@ -70,13 +70,18 @@ func (l *local) Initialize(ctx *context.CLIContext) error {
 
 	// initialize dependency manager
 	l.dependencyManager = manager.NewManager()
-	l.dependencyManager.DefaultRegistry = ctx.Config.DefaultRegistry
 
 	// load project config
 	var err error
 	l.projectConfig, err = project.LoadProjectConfig(ctx.Paths.ProjectConfigFile)
 	if err != nil {
 		return err
+	}
+
+	if l.projectConfig.DefaultRegistry != "" {
+		l.dependencyManager.DefaultRegistry = l.projectConfig.DefaultRegistry
+	} else {
+		l.dependencyManager.DefaultRegistry = ctx.Config.DefaultRegistry
 	}
 
 	return nil
