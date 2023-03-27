@@ -18,7 +18,7 @@ type CLI struct {
 	// Description of your CLI - describe its purpose, when to use it.
 	Description string
 	// Version of your CLI release.
-	// There is no restriction on  version naming, although a version tag must be provided.
+	// There is no restriction on  version naming, although a version tag m ust be provided.
 	// We recommend to use semver convention while tagging versions.
 	Version string `validate:"requir ed"`
 	// DefaultRegistry url will be used anytime a user fails to provide explicit registry in `get` subcommand.
