@@ -1,11 +1,13 @@
 package root
 
 import (
+	"bytes"
 	"fmt"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -106,6 +108,59 @@ func loadExternalCommand(ctx context.CLIContext, rootCmd *cobra.Command, dep dep
 			}
 		},
 		Version: fmt.Sprintf("%s (registry: %s, arch: %s, os: %s, checksum: %s)", dep.Version, dep.Registry, dep.Arch, dep.OS, dep.Checksum),
+		ValidArgsFunction: func(cmd *cobra.Command, args []string, toComplete string) ([]string, cobra.ShellCompDirective) {
+			// Parses the completion info provided by cobra.Command. This should be formatted similar to:
+			//   help	Help about any command
+			//   :4
+			//   Completion ended with directive: ShellCompDirectiveNoFileComp
+			var buffer bytes.Buffer
+			externalCmdPath := filepath.Join(dep.Path, cmdConfig.BinPath)
+			var externalCmd *exec.Cmd
+			completion := []string{"__complete"}
+			if runtime.GOOS == "windows" {
+				args = append([]string{"/c", externalCmdPath}, args...)
+				externalCmdPath = "cmd"
+			}
+			completion = append(completion, args...)
+			completion = append(completion, toComplete)
+			externalCmd = exec.Command(externalCmdPath, completion...)
+			externalCmd.Stdin = os.Stdin
+			externalCmd.Stdout = &buffer
+
+			if err := externalCmd.Start(); err != nil {
+				log.Fatal(err)
+			}
+			err = externalCmd.Wait()
+			if err != nil {
+				switch e := err.(type) {
+				case *exec.ExitError:
+					os.Exit(e.ExitCode())
+				default:
+					log.Fatal(err)
+				}
+			}
+
+			output := buffer.String()
+			if err != nil {
+				return nil, cobra.ShellCompDirectiveError
+			}
+
+			lines := strings.Split(strings.Trim(output, "\n"), "\n")
+			var results []string
+			for _, line := range lines {
+				if strings.HasPrefix(line, ":") {
+					// Special marker in output to indicate the end
+					directive, err := strconv.Atoi(line[1:])
+					if err != nil {
+						return results, cobra.ShellCompDirectiveError
+					}
+					return results, cobra.ShellCompDirective(directive)
+				}
+				results = append(results, line)
+			}
+
+			return []string{}, cobra.ShellCompDirectiveError
+		},
 	}
 	rootCmd.AddCommand(newCmd)
 }
